@@ -4,7 +4,6 @@
 #include "vector2.h"
 #include "edge.h"
 #include "triangle.h"
-
 #include <vector>
 #include <algorithm>
 
@@ -18,6 +17,7 @@ class Delaunay
 		
 		const std::vector<TriangleType>& triangulate(std::vector<VertexType> &vertices)
 		{
+
 			// Store the vertices localy
 			_vertices = vertices;
 
@@ -41,9 +41,9 @@ class Delaunay
 			float midx = (minX + maxX) / 2.f;
 			float midy = (minY + maxY) / 2.f;
 
-			VertexType p1(midx - 20 * deltaMax, midy - deltaMax);
-			VertexType p2(midx, midy + 20 * deltaMax);
-			VertexType p3(midx + 20 * deltaMax, midy - deltaMax);	
+			VertexType p1(midx - 30 * deltaMax, midy - deltaMax);
+			VertexType p2(midx, midy + 30 * deltaMax);
+			VertexType p3(midx + 30 * deltaMax, midy - deltaMax);	
 
 			//std::cout << "Super triangle " << std::endl << Triangle(p1, p2, p3) << std::endl;
 			
@@ -55,6 +55,7 @@ class Delaunay
 				//std::cout << "Traitement du point " << *p << std::endl;
 				//std::cout << "_triangles contains " << _triangles.size() << " elements" << std::endl;	
 
+				std::vector<TriangleType> badTriangles;
 				std::vector<EdgeType> polygon;
 
 				for(auto t = begin(_triangles); t != end(_triangles); t++)
@@ -64,7 +65,7 @@ class Delaunay
 					if(t->circumCircleContains(*p))
 					{
 						//std::cout << "Pushing bad triangle " << *t << std::endl;
-						t->isBad = true;
+						badTriangles.push_back(*t);
 						polygon.push_back(t->e1);	
 						polygon.push_back(t->e2);	
 						polygon.push_back(t->e3);	
@@ -75,10 +76,19 @@ class Delaunay
 					}
 				}
 
-				_triangles.erase(std::remove_if(begin(_triangles), end(_triangles), [](TriangleType &t){
-					return t.isBad;
+				_triangles.erase(std::remove_if(begin(_triangles), end(_triangles), [badTriangles](TriangleType &t){
+					for(auto bt = begin(badTriangles); bt != end(badTriangles); bt++)
+					{	
+						if(*bt == t)
+						{
+							//std::cout << "Removing bad triangle " << std::endl << *bt << " from _triangles" << std::endl;
+							return true;		
+						}
+					}
+					return false;
 				}), end(_triangles));
 
+				std::vector<EdgeType> badEdges;
 				for(auto e1 = begin(polygon); e1 != end(polygon); e1++)
 				{
 					for(auto e2 = begin(polygon); e2 != end(polygon); e2++)
@@ -88,14 +98,19 @@ class Delaunay
 						
 						if(*e1 == *e2)
 						{
-							e1->isBad = true;
-							e2->isBad = true;	
+							badEdges.push_back(*e1);	
+							badEdges.push_back(*e2);	
 						}
 					}
 				}
 
-				polygon.erase(std::remove_if(begin(polygon), end(polygon), [](EdgeType &e){
-					return e.isBad;
+				polygon.erase(std::remove_if(begin(polygon), end(polygon), [badEdges](EdgeType &e){
+					for(auto it = begin(badEdges); it != end(badEdges); it++)
+					{
+						if(*it == e)
+							return true;
+					}
+					return false;
 				}), end(polygon));
 
 				for(auto e = begin(polygon); e != end(polygon); e++)
